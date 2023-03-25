@@ -1,0 +1,65 @@
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosExperiment
+metadata:
+  name: container-kill
+  namespace: litmus
+spec:
+  definition:
+    metadata:
+      name: container-kill
+      namespace: litmus
+    spec:
+      components:
+        env:
+          - name: TARGET_POD
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
+      jobCleanUpPolicy: retain
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: chaos-serviceaccount
+  namespace: litmus
+---
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: user-api-chaos
+  namespace: litmus
+spec:
+  appinfo:
+    appns: app
+    applabel: app=user-api
+    appkind: deployment
+  chaosServiceAccount: chaos-serviceaccount
+  monitoring: true
+  experiments:
+    - name: container-kill
+      spec:
+        components:
+          env:
+            - name: TARGET_POD
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+    - name: pod-delete
+      spec:
+        components:
+          env:
+            - name: APP_NS
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: APP_LABEL
+              value: app=user-api
+            - name: APP_KIND
+              value: deployment
+            - name: APP_NAME
+              value: user-api
+      jobCleanUpPolicy: delete
+  jobCleanUpPolicy: revert
